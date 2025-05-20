@@ -2,4 +2,4 @@ python-docx
 matplotlib 
 streamlit 
 pillow
-pywin32
+lxml
