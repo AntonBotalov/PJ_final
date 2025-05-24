@@ -139,6 +139,7 @@ def set_gost_styles(document: Document) -> None:
     define_heading_style(
         level=3,
         size=14,
+        bold=True,
         italic=False,
         alignment=WD_ALIGN_PARAGRAPH.LEFT,
         first_line_indent=Cm(1.25),
