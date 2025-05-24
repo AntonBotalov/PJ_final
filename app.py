@@ -41,6 +41,19 @@ st.markdown("""
         background-color: #3a78c2;
         color: white !important;
     }
+    div[data-testid="stButton"] button {
+        background-color: #4a90e2;
+        color: white !important;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        border-radius: 3px;
+        width: 100%;
+        border: none;
+    }
+    div[data-testid="stButton"] button:hover {
+        background-color: #3a78c2;
+        color: white !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -74,7 +87,7 @@ with st.expander("Инструкция по использованию"):
     2. **Настройте параметры**:
        - Включите или отключите опции парсинга ("Использовать маркеры" и "Использовать регулярные выражения").
        - Настройте параметры форматирования (замена кавычек, добавление пустых строк, форматирование таблиц и т.д.).
-    3. **Обработайте документ**: После загрузки файла и настройки параметров приложение автоматически начнёт обработку. Дождитесь завершения (это займёт несколько секунд).
+    3. **Нажмите "Форматировать"**: После настройки параметров нажмите кнопку "Форматировать", чтобы начать обработку. Дождитесь завершения (это займёт несколько секунд).
     4. **Просмотрите статистику**: После обработки вы увидите статистику документа (время выполнения, количество абзацев, таблиц, рисунков, приложений).
     5. **Скачайте результат**: Нажмите на кнопку "Скачать отформатированный документ", чтобы сохранить обработанный файл в формате `.docx`.
 
@@ -107,115 +120,118 @@ with st.expander("Инструкция по использованию"):
 
 # Загрузка файла
 uploaded_file = st.file_uploader("Загрузите DOCX-файл", type=["docx"])
+
+# Инициализация переменных для результатов
+if 'formatted' not in st.session_state:
+    st.session_state.formatted = False
+    st.session_state.elements = None
+    st.session_state.stats = None
+    st.session_state.parse_time = None
+    st.session_state.format_duration = None
+    st.session_state.total_time = None
+
+# Кнопка "Форматировать"
 if uploaded_file:
-    with st.spinner("Обработка документа..."):
-        temp_path = Path("temp.docx")
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.getvalue())
+    temp_path = Path("temp.docx")
+    with open(temp_path, "wb") as f:
+        f.write(uploaded_file.getvalue())
 
-        # Измеряем время парсинга
-        start_parse = time.time()
-        elements, stats = parse_document(
-            temp_path,
-            use_markers=use_markers,
-            use_regex=use_regex
-        )
-        end_parse = time.time()
-        parse_time = end_parse - start_parse
-
-        # Измеряем время форматирования
-        start_format = time.time()
-        doc = Document(temp_path)
-        formatted_doc = build_document(
-            elements,
-            doc=doc,
-            output_path="formatted_output.docx",
-            config={
-                "replace_quotes": replace_quotes,
-                "add_space_before": add_space_before,
-                "add_space_after": add_space_after,
-                "format_tables": format_tables,
-                "add_space_after_heading1": add_space_after_heading1
-            }
-        )
-        end_format = time.time()
-        format_duration = end_format - start_format
-
-        # Подсчёт общего количества абзацев
-        paragraph_types = ["heading_1", "heading_2", "heading_3", "heading_4", "list_ordered", "list_bullet", "paragraph", "formula", "table_caption", "figure_caption"]
-        total_paragraphs = sum(1 for el in elements if el["type"] in paragraph_types)
-
-        # Подсчёт приложений (заголовков, начинающихся с "ПРИЛОЖЕНИЯ" или "ПРИЛОЖЕНИЕ")
-        appendix_count = sum(1 for el in elements if el["type"] == "heading_1" and el.get("text", "").upper().strip().startswith(("ПРИЛОЖЕНИ", "ПРИЛОЖЕНИЕ")))
-
-        # Форматируем время для отображения
-        def format_time(seconds: float) -> str:
-            if seconds < 1:
-                return f"{seconds * 1000:.0f} мс"
-            elif seconds < 60:
-                return f"{seconds:.2f} сек"
-            else:
-                minutes = int(seconds // 60)
-                remaining_secs = seconds % 60
-                return f"{minutes} мин {remaining_secs:.2f} сек"
-
-        parse_time_display = format_time(parse_time)
-        format_time_display = format_time(format_duration)
-        total_time = parse_time + format_duration
-        total_time_display = format_time(total_time)
-
-        # Проверяем статус изображений
-        # figures = [el for el in elements if el["type"] == "figure"]
-        # missing_images = [el for el in figures if not el.get("image")]
-        # if figures:
-        #     st.info(f"Обнаружено {len(figures)} рисунков, из них {len(missing_images)} без изображений.")
-        #     if missing_images:
-        #         st.warning(
-        #             "Некоторые рисунки не содержат изображений. "
-        #             "Убедитесь, что изображения вставлены в документ перед подписями ([FIGURE]). "
-        #             "Проверьте логи (app.log) для деталей."
-        #         )
-        # else:
-        #     st.warning("Рисунки не обнаружены в документе.")
-
-        # Отображение времени выполнения
-        st.markdown('<div class="section-header">Время выполнения</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="stats-item">Время парсинга: {parse_time_display}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="stats-item">Время форматирования: {format_time_display}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="stats-item">Общее время: {total_time_display}</div>', unsafe_allow_html=True)
-
-        # Отображение статистики
-        st.markdown('<div class="section-header">Статистика документа</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="stats-item">Общее количество абзацев: {total_paragraphs}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="stats-item">Таблицы: {stats["tables"]}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="stats-item">Рисунки: {stats["figures"]}</div>', unsafe_allow_html=True)
-
-        # Дерево элементов
-        with st.expander("Дерево элементов", expanded=False):
-            for el in elements:
-                kind = el.get("type", "paragraph")
-                preview = el.get("text") or el.get("caption", "") or ""
-                indent = "  " * el.get("list_level", 0)
-                if kind.startswith("list_"):
-                    ordered = "нумерованный" if el.get("ordered") else "маркированный"
-                    level = el.get("list_level", 0)
-                    st.write(f"{indent}**{kind} ({ordered}, уровень {level})**: {preview[:120]}")
-                elif kind == "figure":
-                    img_status = "с изображением" if el.get("image") else "без изображения"
-                    st.write(f"{indent}**{kind} (№{el.get('number')}, {img_status})**: Подпись='{preview[:120]}'")
-                else:
-                    st.write(f"{indent}**{kind}**: {preview[:120]}")
-
-        # Кнопка скачивания
-        with open("formatted_output.docx", "rb") as f:
-            st.download_button(
-                label="Скачать отформатированный документ",
-                data=f,
-                file_name="formatted_output.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key="download-button",
-                use_container_width=True
+    if st.button("Форматировать", use_container_width=True):
+        with st.spinner("Обработка документа..."):
+            # Измеряем время парсинга
+            start_parse = time.time()
+            st.session_state.elements, st.session_state.stats = parse_document(
+                temp_path,
+                use_markers=use_markers,
+                use_regex=use_regex
             )
+            end_parse = time.time()
+            st.session_state.parse_time = end_parse - start_parse
 
-        temp_path.unlink()
-        Path("formatted_output.docx").unlink()
+            # Измеряем время форматирования
+            start_format = time.time()
+            doc = Document(temp_path)
+            formatted_doc = build_document(
+                st.session_state.elements,
+                doc=doc,
+                output_path="formatted_output.docx",
+                config={
+                    "replace_quotes": replace_quotes,
+                    "add_space_before": add_space_before,
+                    "add_space_after": add_space_after,
+                    "format_tables": format_tables,
+                    "add_space_after_heading1": add_space_after_heading1
+                }
+            )
+            end_format = time.time()
+            st.session_state.format_duration = end_format - start_format
+
+            # Подсчёт общего количества абзацев
+            paragraph_types = ["heading_1", "heading_2", "heading_3", "heading_4", "list_ordered", "list_bullet", "paragraph", "formula", "table_caption", "figure_caption"]
+            total_paragraphs = sum(1 for el in st.session_state.elements if el["type"] in paragraph_types)
+
+            # Подсчёт приложений (заголовков, начинающихся с "ПРИЛОЖЕНИЯ" или "ПРИЛОЖЕНИЕ")
+            appendix_count = sum(1 for el in st.session_state.elements if el["type"] == "heading_1" and el.get("text", "").upper().strip().startswith(("ПРИЛОЖЕНИ", "ПРИЛОЖЕНИЕ")))
+
+            # Форматируем время для отображения
+            def format_time(seconds: float) -> str:
+                if seconds < 1:
+                    return f"{seconds * 1000:.0f} мс"
+                elif seconds < 60:
+                    return f"{seconds:.2f} сек"
+                else:
+                    minutes = int(seconds // 60)
+                    remaining_secs = seconds % 60
+                    return f"{minutes} мин {remaining_secs:.2f} сек"
+
+            parse_time_display = format_time(st.session_state.parse_time)
+            format_time_display = format_time(st.session_state.format_duration)
+            st.session_state.total_time = st.session_state.parse_time + st.session_state.format_duration
+            total_time_display = format_time(st.session_state.total_time)
+
+            # Отображение времени выполнения
+            st.markdown('<div class="section-header">Время выполнения</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stats-item">Время парсинга: {parse_time_display}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stats-item">Время форматирования: {format_time_display}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stats-item">Общее время: {total_time_display}</div>', unsafe_allow_html=True)
+
+            # Отображение статистики
+            st.markdown('<div class="section-header">Статистика документа</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stats-item">Общее количество абзацев: {total_paragraphs}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stats-item">Таблицы: {st.session_state.stats["tables"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="stats-item">Рисунки: {st.session_state.stats["figures"]}</div>', unsafe_allow_html=True)
+
+            # Дерево элементов
+            with st.expander("Дерево элементов", expanded=False):
+                for el in st.session_state.elements:
+                    kind = el.get("type", "paragraph")
+                    preview = el.get("text") or el.get("caption", "") or ""
+                    indent = "  " * el.get("list_level", 0)
+                    if kind.startswith("list_"):
+                        ordered = "нумерованный" if el.get("ordered") else "маркированный"
+                        level = el.get("list_level", 0)
+                        st.write(f"{indent}**{kind} ({ordered}, уровень {level})**: {preview[:120]}")
+                    elif kind == "figure":
+                        img_status = "с изображением" if el.get("image") else "без изображения"
+                        st.write(f"{indent}**{kind} (№{el.get('number')}, {img_status})**: Подпись='{preview[:120]}'")
+                    else:
+                        st.write(f"{indent}**{kind}**: {preview[:120]}")
+
+            # Кнопка скачивания
+            with open("formatted_output.docx", "rb") as f:
+                st.download_button(
+                    label="Скачать отформатированный документ",
+                    data=f,
+                    file_name="formatted_output.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key="download-button",
+                    use_container_width=True
+                )
+
+            # Удаляем временные файлы
+            temp_path.unlink()
+            Path("formatted_output.docx").unlink()
+            st.session_state.formatted = True
+
+else:
+    st.info("Пожалуйста, загрузите DOCX-файл, настройте параметры и нажмите кнопку 'Форматировать'.")

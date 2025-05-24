@@ -170,7 +170,7 @@ def set_gost_styles(document: Document) -> None:
     pformat.first_line_indent = Cm(0)
     pformat.space_before = Pt(0)
     pformat.space_after = Pt(8)
-    pformat.line_spacing = 1.5
+    pformat.line_spacing = 1.0
 
     # ─── Стили списков ────────────────────────────────────────────────────
     define_list_style("List Bullet", is_ordered=False, base_indent=1.25, hanging_indent=-0.63)
@@ -187,8 +187,8 @@ def set_gost_styles(document: Document) -> None:
     _configure_font(style.font, size=14)
     pformat = style.paragraph_format
     pformat.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    pformat.space_before = Pt(12)
-    pformat.space_after = Pt(12)
+    pformat.space_before = Pt(0)
+    pformat.space_after = Pt(0)
     pformat.line_spacing = 1.5
 
     # ─── Стиль Table Grid ─────────────────────────────────────────────────
@@ -204,7 +204,7 @@ def set_gost_styles(document: Document) -> None:
     pformat.space_before = Pt(0)
     pformat.space_after = Pt(0)
     pformat.line_spacing = 1.5
-    pformat.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pformat.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     # Настройка границ таблицы
     tbl_pr = style._element.xpath("//w:tblPr")[0]

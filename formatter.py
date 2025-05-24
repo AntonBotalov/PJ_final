@@ -210,6 +210,25 @@ def _set_outline_level(paragraph: Paragraph, level: int) -> None:
     pPr.append(outlineLvl)
     logger.debug(f"Установлен outline level {level - 1} для параграфа")
 
+def _disable_auto_spacing(paragraph: Paragraph) -> None:
+    """
+    Отключает автоматические интервалы до и после абзаца (w:beforeAutospacing и w:afterAutospacing).
+
+    Args:
+        paragraph (Paragraph): Параграф, для которого нужно отключить автоинтервалы.
+    """
+    p = paragraph._element
+    pPr = p.get_or_add_pPr()
+    spacing = pPr.find(qn('w:spacing'))
+    if spacing is None:
+        spacing = OxmlElement('w:spacing')
+        pPr.append(spacing)
+    
+    # Отключаем автоматические интервалы
+    spacing.set(qn('w:beforeAutospacing'), "0")
+    spacing.set(qn('w:afterAutospacing'), "0")
+    logger.debug("Отключены автоматические интервалы до и после абзаца")
+
 def _clean_marker(text: str, marker_pattern: str) -> str:
     """
     Удаляет маркер из текста.
@@ -343,6 +362,10 @@ def format_document(
 
                     if lvl == 1 and add_space_after_heading1:
                         space_para = doc.add_paragraph("", style="Normal")
+                        space_para.paragraph_format.line_spacing = 1.5  # Принудительно устанавливаем межстрочный интервал
+                        space_para.paragraph_format.space_before = Pt(0)  # Принудительно устанавливаем отступ перед абзацем
+                        space_para.paragraph_format.space_after = Pt(0)   # Принудительно устанавливаем отступ после абзаца
+                        _disable_auto_spacing(space_para)  # Отключаем автоматические интервалы
                         new_para._element.addnext(space_para._element)
 
                     parent = para._element.getparent()
@@ -370,8 +393,37 @@ def format_document(
                     prev_list_type, prev_level = "list_bullet", lvl
                     logger.debug(f"Отформатирован маркированный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
 
-                # ───── Ordered-list и библиография ────────────────────────────────
-                elif etype == "list_ordered" or is_bibliography:
+                # ───── Ordered-list ────────────────────────────────
+                elif etype == "list_ordered" and not is_bibliography:
+                    lvl = el.get("list_level", 0)
+
+                    if prev_list_type != "list_ordered" or (
+                        prev_level is not None and lvl < prev_level
+                    ):
+                        cnt = {k: v for k, v in cnt.items() if k < lvl}
+
+                    num = cnt.get(lvl, 0) + 1
+                    cnt[lvl] = num
+
+                    prefix = f"{'абвгдежзийклмнопрстуфхцчшщъыьэюя'[num-1]}) " if lvl == 0 else \
+                             f"{num}) "
+                    core = el.get("text", "")
+                    # Удаляем маркеры [OL], [OL:1]
+                    core = _clean_marker(core, r'^\[(OL|OL:\d+)\]\s*')
+                    # Очищаем параграф и добавляем новый текст
+                    para.clear()
+                    if replace_quotes:
+                        core = _replace_quotes(core)
+                    para.add_run(f"{prefix}{core}")
+                    para.style = "List Number"
+                    if lvl > 0:
+                        para.paragraph_format.left_indent = Cm(1.25 * (lvl + 1))
+                        para.paragraph_format.first_line_indent = Cm(-0.63)
+                    prev_list_type, prev_level = "list_ordered", lvl
+                    logger.debug(f"Отформатирован нумерованный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
+                    
+                # ───── Библиография ────────────────────────────────   
+                elif (etype == "list_ordered" and is_bibliography) or is_bibliography:
                     lvl = el.get("list_level", 0) if not is_bibliography else 0
 
                     if prev_list_type != "list_ordered" or (
@@ -411,6 +463,10 @@ def format_document(
                     if add_space_before:
                         new_p = doc.add_paragraph("", style="Normal")
                         new_p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                        new_p.paragraph_format.line_spacing = 1.5  # Принудительно устанавливаем межстрочный интервал
+                        new_p.paragraph_format.space_before = Pt(0)  # Принудительно устанавливаем отступ перед абзацем
+                        new_p.paragraph_format.space_after = Pt(0)   # Принудительно устанавливаем отступ после абзаца
+                        _disable_auto_spacing(new_p)  # Отключаем автоматические интервалы
                         node.addprevious(new_p._element)
 
                     p_img = doc.add_paragraph()
@@ -455,6 +511,10 @@ def format_document(
 
                     if add_space_after:
                         new_p = doc.add_paragraph("", style="Normal")
+                        new_p.paragraph_format.line_spacing = 1.5  # Принудительно устанавливаем межстрочный интервал
+                        new_p.paragraph_format.space_before = Pt(0)  # Принудительно устанавливаем отступ перед абзацем
+                        new_p.paragraph_format.space_after = Pt(0)   # Принудительно устанавливаем отступ после абзаца
+                        _disable_auto_spacing(new_p)  # Отключаем автоматические интервалы
                         p_cap._element.addnext(new_p._element)
 
                     parent = para._element.getparent()
@@ -487,6 +547,10 @@ def format_document(
                     para.clear()
                     para.add_run(core)
                     para.style = "Normal"
+                    para.paragraph_format.line_spacing = 1.5  # Принудительно устанавливаем межстрочный интервал
+                    para.paragraph_format.space_before = Pt(0)  # Принудительно устанавливаем отступ перед абзацем
+                    para.paragraph_format.space_after = Pt(0)   # Принудительно устанавливаем отступ после абзаца
+                    _disable_auto_spacing(para)  # Отключаем автоматические интервалы
                     prev_list_type = None
                     logger.debug(f"Отформатирован параграф на para_idx {para_idx}: '{core[:50]}'")
 
@@ -519,6 +583,10 @@ def format_document(
                 if add_space_before:
                     new_p = doc.add_paragraph("", style="Normal")
                     new_p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                    new_p.paragraph_format.line_spacing = 1.5  # Принудительно устанавливаем межстрочный интервал
+                    new_p.paragraph_format.space_before = Pt(0)  # Принудительно устанавливаем отступ перед абзацем
+                    new_p.paragraph_format.space_after = Pt(0)   # Принудительно устанавливаем отступ после абзаца
+                    _disable_auto_spacing(new_p)  # Отключаем автоматические интервалы
                     node.addprevious(new_p._element)
 
                 cap_txt = _norm_cap("table", table_el.get("caption", ""))
@@ -534,7 +602,7 @@ def format_document(
                 table = Table(node, doc)
                 if format_tables:
                     table.style = "Table Grid"
-                    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+                    table.alignment = WD_TABLE_ALIGNMENT.LEFT
                     table.autofit = False
                     for row in table.rows:
                         row.height = Pt(table_row_height)
@@ -552,13 +620,17 @@ def format_document(
                             pr.paragraph_format.left_indent = Cm(0)
                             pr.paragraph_format.space_before = Pt(0)
                             pr.paragraph_format.space_after = Pt(0)
-                            pr.alignment = WD_ALIGN_PARAGRAPH.CENTER 
+                            pr.alignment = WD_ALIGN_PARAGRAPH.LEFT 
                     logger.debug(f"Отформатирована таблица №{table_i} с {len(table.rows)} строками")
                 else:
                     logger.debug(f"Форматирование таблицы №{table_i} пропущено (format_tables=False)")
 
                 if add_space_after:
                     new_p = doc.add_paragraph("", style="Normal")
+                    new_p.paragraph_format.line_spacing = 1.5  # Принудительно устанавливаем межстрочный интервал
+                    new_p.paragraph_format.space_before = Pt(0)  # Принудительно устанавливаем отступ перед абзацем
+                    new_p.paragraph_format.space_after = Pt(0)   # Принудительно устанавливаем отступ после абзаца
+                    _disable_auto_spacing(new_p)  # Отключаем автоматические интервалы
                     node.addnext(new_p._element)
 
             else:
