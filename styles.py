@@ -124,7 +124,8 @@ def set_gost_styles(document: Document) -> None:
         space_before=Pt(0),
         space_after=Pt(0),
         page_break_before=True,
-        line_spacing=1.0
+        line_spacing=1.0,
+        first_line_indent = Cm(0)
     )
     define_heading_style(
         level=2,
