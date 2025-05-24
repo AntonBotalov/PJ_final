@@ -16,7 +16,7 @@ from regex_patterns import match_element_type
 logger = logging.getLogger(__name__)
 
 # Константы
-_BULLETS = r"[\-–—•·→■▪□➤*]"
+_BULLETS = r"[\-–—•·→■▪□➤]"
 
 def parse_marker(text: str) -> tuple[str | None, str, int | None]:
     """

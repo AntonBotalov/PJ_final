@@ -121,8 +121,8 @@ def set_gost_styles(document: Document) -> None:
         bold=True,
         all_caps=True,
         alignment=WD_ALIGN_PARAGRAPH.CENTER,
-        space_before=Pt(24),
-        space_after=Pt(12),
+        space_before=Pt(0),
+        space_after=Pt(0),
         page_break_before=True,
         line_spacing=1.0
     )
@@ -131,7 +131,7 @@ def set_gost_styles(document: Document) -> None:
         size=14,
         bold=True,
         alignment=WD_ALIGN_PARAGRAPH.LEFT,
-        space_before=Pt(18),
+        space_before=Pt(0),
         space_after=Pt(8),
         line_spacing=1.0
     )
@@ -141,7 +141,7 @@ def set_gost_styles(document: Document) -> None:
         italic=False,
         alignment=WD_ALIGN_PARAGRAPH.LEFT,
         first_line_indent=Cm(1.25),
-        space_before=Pt(12),
+        space_before=Pt(0),
         space_after=Pt(8),
         line_spacing=1.0
     )
@@ -151,7 +151,7 @@ def set_gost_styles(document: Document) -> None:
         italic=True,
         alignment=WD_ALIGN_PARAGRAPH.LEFT,
         first_line_indent=Cm(1.25),
-        space_before=Pt(12),
+        space_before=Pt(0),
         space_after=Pt(8),
         line_spacing=1.0
     )
@@ -169,7 +169,7 @@ def set_gost_styles(document: Document) -> None:
     pformat.alignment = WD_ALIGN_PARAGRAPH.CENTER  # Для рисунков; для таблиц будет переопределено в formatter.py
     pformat.first_line_indent = Cm(0)
     pformat.space_before = Pt(0)
-    pformat.space_after = Pt(0)
+    pformat.space_after = Pt(8)
     pformat.line_spacing = 1.5
 
     # ─── Стили списков ────────────────────────────────────────────────────

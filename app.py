@@ -91,8 +91,8 @@ with st.expander("Инструкция по использованию"):
     **Пример:**
     ```
     [H1] Введение
-    [UL] – Тест.
-    [OL:1] а) Подпункт.
+    [UL] Тест
+    [OL:1] Подпункт
     [TABLE] Пример структуры
     ```
 
@@ -165,18 +165,18 @@ if uploaded_file:
         total_time_display = format_time(total_time)
 
         # Проверяем статус изображений
-        figures = [el for el in elements if el["type"] == "figure"]
-        missing_images = [el for el in figures if not el.get("image")]
-        if figures:
-            st.info(f"Обнаружено {len(figures)} рисунков, из них {len(missing_images)} без изображений.")
-            if missing_images:
-                st.warning(
-                    "Некоторые рисунки не содержат изображений. "
-                    "Убедитесь, что изображения вставлены в документ перед подписями ([FIGURE]). "
-                    "Проверьте логи (app.log) для деталей."
-                )
-        else:
-            st.warning("Рисунки не обнаружены в документе.")
+        # figures = [el for el in elements if el["type"] == "figure"]
+        # missing_images = [el for el in figures if not el.get("image")]
+        # if figures:
+        #     st.info(f"Обнаружено {len(figures)} рисунков, из них {len(missing_images)} без изображений.")
+        #     if missing_images:
+        #         st.warning(
+        #             "Некоторые рисунки не содержат изображений. "
+        #             "Убедитесь, что изображения вставлены в документ перед подписями ([FIGURE]). "
+        #             "Проверьте логи (app.log) для деталей."
+        #         )
+        # else:
+        #     st.warning("Рисунки не обнаружены в документе.")
 
         # Отображение времени выполнения
         st.markdown('<div class="section-header">Время выполнения</div>', unsafe_allow_html=True)
@@ -189,7 +189,6 @@ if uploaded_file:
         st.markdown(f'<div class="stats-item">Общее количество абзацев: {total_paragraphs}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="stats-item">Таблицы: {stats["tables"]}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="stats-item">Рисунки: {stats["figures"]}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="stats-item">Приложения: {appendix_count}</div>', unsafe_allow_html=True)
 
         # Дерево элементов
         with st.expander("Дерево элементов", expanded=False):

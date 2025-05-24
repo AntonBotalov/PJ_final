@@ -9,6 +9,7 @@ from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.table import Table
+from docx.oxml import OxmlElement
 import logging
 
 __all__ = ["format_document"]
@@ -190,6 +191,25 @@ def _remove_numbering(paragraph: Paragraph) -> None:
         if elem is not None:
             pPr.remove(elem)
 
+def _set_outline_level(paragraph: Paragraph, level: int) -> None:
+    """
+    Устанавливает outline level для параграфа.
+
+    Args:
+        paragraph (Paragraph): Параграф, для которого нужно установить уровень.
+        level (int): Уровень заголовка (1, 2, 3, 4).
+    """
+    p = paragraph._element
+    pPr = p.get_or_add_pPr()
+    # Удаляем существующий outlineLvl, если он есть
+    for existing_lvl in pPr.xpath('w:outlineLvl'):
+        pPr.remove(existing_lvl)
+    # Добавляем новый outlineLvl
+    outlineLvl = OxmlElement('w:outlineLvl')
+    outlineLvl.set(qn('w:val'), str(level - 1))  # outlineLvl: 0 для Heading 1, 1 для Heading 2 и т.д.
+    pPr.append(outlineLvl)
+    logger.debug(f"Установлен outline level {level - 1} для параграфа")
+
 def _clean_marker(text: str, marker_pattern: str) -> str:
     """
     Удаляет маркер из текста.
@@ -278,7 +298,7 @@ def format_document(
                             num = ""
                         else:
                             heading_counters[1] += 1
-                            num = f"{heading_counters[1]}"
+                            num = f"{heading_counters[1]}"  # Без точки в конце
                         heading_counters[2] = 0
                         heading_counters[3] = 0
                         heading_counters[4] = 0
@@ -286,14 +306,14 @@ def format_document(
                         heading_counters[2] += 1
                         heading_counters[3] = 0
                         heading_counters[4] = 0
-                        num = f"{heading_counters[1]}.{heading_counters[2]}"
+                        num = f"{heading_counters[1]}.{heading_counters[2]}"  # Без точки в конце
                     elif lvl == 3:
                         heading_counters[3] += 1
                         heading_counters[4] = 0
-                        num = f"{heading_counters[1]}.{heading_counters[2]}.{heading_counters[3]}"
+                        num = f"{heading_counters[1]}.{heading_counters[2]}.{heading_counters[3]}"  # Без точки в конце
                     else:  # lvl == 4
                         heading_counters[4] += 1
-                        num = f"{heading_counters[1]}.{heading_counters[2]}.{heading_counters[3]}.{heading_counters[4]}"
+                        num = f"{heading_counters[1]}.{heading_counters[2]}.{heading_counters[3]}.{heading_counters[4]}"  # Без точки в конце
 
                     if lvl == 1:
                         text = text.upper()
@@ -303,9 +323,23 @@ def format_document(
                         run = break_para.add_run()
                         run.add_break(WD_BREAK.PAGE)
 
-                    new_para = para.insert_paragraph_before(f"{num} {text}".strip(), style=f"Heading {lvl}")
+                    # Создаём новый параграф с заголовком
+                    new_para = para.insert_paragraph_before("", style=f"Heading {lvl}")
+                    run = new_para.add_run(f"{num} {text}".strip())
+                    
+                    # Принудительно устанавливаем шрифт Times New Roman для всех run-объектов
+                    for run in new_para.runs:
+                        run.font.name = "Times New Roman"
+                        logger.debug(f"Шрифт для заголовка уровня {lvl} установлен: Times New Roman")
 
+                    # Устанавливаем outline level
+                    _set_outline_level(new_para, lvl)
+
+                    # Очищаем возможные конфликтующие настройки
                     _remove_numbering(new_para)
+
+                    # Убедимся, что стиль применяется корректно
+                    new_para.style = f"Heading {lvl}"
 
                     if lvl == 1 and add_space_after_heading1:
                         space_para = doc.add_paragraph("", style="Normal")
