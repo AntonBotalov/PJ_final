@@ -77,8 +77,8 @@ def set_gost_styles(document: Document) -> None:
     def define_list_style(
         style_name: str,
         is_ordered: bool,
-        base_indent: float = 1.25,
-        hanging_indent: float = -0.63
+        base_indent: float = 0.0,
+        first_line_indent: float = 1.25
     ) -> None:
         """Определяет стиль для списков (нумерованных или маркированных)."""
         if style_name in document.styles:
@@ -92,7 +92,7 @@ def set_gost_styles(document: Document) -> None:
 
         pformat = style.paragraph_format
         pformat.left_indent = Cm(base_indent)
-        pformat.first_line_indent = Cm(hanging_indent)
+        pformat.first_line_indent = Cm(first_line_indent)
         pformat.space_before = Pt(0)
         pformat.space_after = Pt(0)
         pformat.line_spacing = 1.5
@@ -115,38 +115,46 @@ def set_gost_styles(document: Document) -> None:
     pformat.space_after = Pt(0)
 
     # ─── Стили заголовков ─────────────────────────────────────────────────
+    # Heading 1: Ненумерованные — заглавные, по центру, полужирные
+    # Нумерованные — строчные (кроме первой), по левому краю, полужирные, отступ слева 1,25 см
     define_heading_style(
         level=1,
         size=14,
         bold=True,
-        all_caps=True,
-        alignment=WD_ALIGN_PARAGRAPH.CENTER,
+        all_caps=False,  # Для ненумерованных заголовков (будет переопределено в formatter.py для нумерованных)
+        alignment=WD_ALIGN_PARAGRAPH.CENTER,  # Для ненумерованных (переопределим для нумерованных)
         space_before=Pt(0),
         space_after=Pt(0),
         page_break_before=True,
         line_spacing=1.0,
-        first_line_indent = Cm(0)
+        first_line_indent=Cm(0)   # Для ненумерованных (переопределим для нумерованных)
     )
+    # Heading 2: Строчные (кроме первой), по левому краю, полужирные, отступ слева 1,25 см
     define_heading_style(
         level=2,
         size=14,
         bold=True,
+        all_caps=False,  # Убираем заглавные буквы
         alignment=WD_ALIGN_PARAGRAPH.LEFT,
         space_before=Pt(0),
-        space_after=Pt(8),
-        line_spacing=1.0
+        space_after=Pt(8),  # Пустая строка после заголовка
+        line_spacing=1.0,
+        left_indent=Cm(1.25)  # Отступ слева 1,25 см
     )
+    # Heading 3: Строчные (кроме первой), по левому краю, без полужирного, отступ слева 1,25 см
     define_heading_style(
         level=3,
         size=14,
-        bold=True,
+        bold=False,  # Убираем полужирный
         italic=False,
+        all_caps=False,  # Убираем заглавные буквы
         alignment=WD_ALIGN_PARAGRAPH.LEFT,
-        first_line_indent=Cm(1.25),
         space_before=Pt(0),
-        space_after=Pt(8),
-        line_spacing=1.0
+        space_after=Pt(8),  # Пустая строка после заголовка
+        line_spacing=1.0,
+        left_indent=Cm(1.25)  # Отступ слева 1,25 см
     )
+    # Heading 4: Оставляем как есть (нет новых требований)
     define_heading_style(
         level=4,
         size=14,
@@ -175,8 +183,8 @@ def set_gost_styles(document: Document) -> None:
     pformat.line_spacing = 1.0
 
     # ─── Стили списков ────────────────────────────────────────────────────
-    define_list_style("List Bullet", is_ordered=False, base_indent=1.25, hanging_indent=-0.63)
-    define_list_style("List Number", is_ordered=True, base_indent=1.25, hanging_indent=-0.63)
+    define_list_style("List Bullet", is_ordered=False, base_indent=0.0, first_line_indent=1.25)
+    define_list_style("List Number", is_ordered=True, base_indent=0.0, first_line_indent=1.25)
 
     # ─── Стиль Formula ────────────────────────────────────────────────────
     if "Formula" in document.styles:
@@ -188,7 +196,7 @@ def set_gost_styles(document: Document) -> None:
 
     _configure_font(style.font, size=14)
     pformat = style.paragraph_format
-    pformat.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pformat.alignment = WD_ALIGN_PARAGRAPH.LEFT
     pformat.space_before = Pt(0)
     pformat.space_after = Pt(0)
     pformat.line_spacing = 1.5

@@ -255,7 +255,7 @@ def format_document(
     Args:
         elements: Список распознанных элементов документа.
         doc: Существующий документ Word.
-        config: Настройки форматирования (replace_quotes, add_space_before, add_space_after, format_tables, add_space_after_heading1).
+        config: Настройки форматирования (replace_quotes, add_space_before, add_space_after, format_tables, add_space_after_headings).
 
     Returns:
         Document: Отформатированный документ.
@@ -268,7 +268,7 @@ def format_document(
     add_space_before = cfg.get("add_space_before", True)
     add_space_after = cfg.get("add_space_after", True)
     format_tables = cfg.get("format_tables", True)
-    add_space_after_heading1 = cfg.get("add_space_after_heading1", True)
+    add_space_after_headings = cfg.get("add_space_after_headings", True)  # Обновили ключ
     table_row_height = cfg.get("table_row_height", 18)
     max_table_row_height = cfg.get("max_table_row_height", 60)
 
@@ -315,9 +315,13 @@ def format_document(
                         check_text = text.upper().strip()
                         if check_text in NO_NUMERATION_HEADINGS:
                             num = ""
+                            # Ненумерованный заголовок — оставляем заглавные буквы и выравнивание по центру
+                            text = text.upper()
                         else:
                             heading_counters[1] += 1
                             num = f"{heading_counters[1]}"  # Без точки в конце
+                            # Нумерованный заголовок — строчные буквы, кроме первой прописной
+                            text = text.lower().capitalize()
                         heading_counters[2] = 0
                         heading_counters[3] = 0
                         heading_counters[4] = 0
@@ -326,16 +330,17 @@ def format_document(
                         heading_counters[3] = 0
                         heading_counters[4] = 0
                         num = f"{heading_counters[1]}.{heading_counters[2]}"  # Без точки в конце
+                        # Строчные буквы, кроме первой прописной
+                        text = text.lower().capitalize()
                     elif lvl == 3:
                         heading_counters[3] += 1
                         heading_counters[4] = 0
                         num = f"{heading_counters[1]}.{heading_counters[2]}.{heading_counters[3]}"  # Без точки в конце
+                        # Строчные буквы, кроме первой прописной
+                        text = text.lower().capitalize()
                     else:  # lvl == 4
                         heading_counters[4] += 1
                         num = f"{heading_counters[1]}.{heading_counters[2]}.{heading_counters[3]}.{heading_counters[4]}"  # Без точки в конце
-
-                    if lvl == 1:
-                        text = text.upper()
 
                     if lvl == 1:
                         break_para = para.insert_paragraph_before()
@@ -360,12 +365,22 @@ def format_document(
                     # Убедимся, что стиль применяется корректно
                     new_para.style = f"Heading {lvl}"
 
-                    if lvl == 1 and add_space_after_heading1:
+                    # Переопределяем параметры для нумерованных заголовков 1 уровня
+                    if lvl == 1 and num != "":
+                        new_para.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                        new_para.paragraph_format.left_indent = Cm(1.25)
+
+                    # Сбрасываем first_line_indent для заголовков 2 и 3 уровня, чтобы итоговый отступ был 1.25 см
+                    if lvl in [2, 3]:
+                        new_para.paragraph_format.first_line_indent = Cm(0)
+
+                    # Добавляем пустую строку после заголовка, если включена настройка
+                    if add_space_after_headings:
                         space_para = doc.add_paragraph("", style="Normal")
-                        space_para.paragraph_format.line_spacing = 1.5  # Принудительно устанавливаем межстрочный интервал
-                        space_para.paragraph_format.space_before = Pt(0)  # Принудительно устанавливаем отступ перед абзацем
-                        space_para.paragraph_format.space_after = Pt(0)   # Принудительно устанавливаем отступ после абзаца
-                        _disable_auto_spacing(space_para)  # Отключаем автоматические интервалы
+                        space_para.paragraph_format.line_spacing = 1.5
+                        space_para.paragraph_format.space_before = Pt(0)
+                        space_para.paragraph_format.space_after = Pt(0)
+                        _disable_auto_spacing(space_para)
                         new_para._element.addnext(space_para._element)
 
                     parent = para._element.getparent()
@@ -387,9 +402,11 @@ def format_document(
                         core = _replace_quotes(core)
                     para.add_run(f"– {core}")
                     para.style = "List Bullet"
+                    # Для уровня 0 отступы уже заданы в styles.py (left_indent=0, first_line_indent=1.25)
                     if lvl > 0:
-                        para.paragraph_format.left_indent = Cm(1.25 * (lvl + 1))
-                        para.paragraph_format.first_line_indent = Cm(-0.63)
+                        # Каждый уровень добавляет 0.75 см к предыдущему
+                        para.paragraph_format.left_indent = Cm(0.75 * lvl)
+                        # first_line_indent уже 1.25 из styles.py, не нужно менять
                     prev_list_type, prev_level = "list_bullet", lvl
                     logger.debug(f"Отформатирован маркированный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
 
@@ -416,9 +433,10 @@ def format_document(
                         core = _replace_quotes(core)
                     para.add_run(f"{prefix}{core}")
                     para.style = "List Number"
+                    # Для уровня 0 отступы уже заданы в styles.py (left_indent=0, first_line_indent=1.25)
                     if lvl > 0:
-                        para.paragraph_format.left_indent = Cm(1.25 * (lvl + 1))
-                        para.paragraph_format.first_line_indent = Cm(-0.63)
+                        para.paragraph_format.left_indent = Cm(0.75 * lvl)
+                        # first_line_indent уже 1.25 из styles.py, не нужно менять
                     prev_list_type, prev_level = "list_ordered", lvl
                     logger.debug(f"Отформатирован нумерованный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
                     
@@ -445,9 +463,10 @@ def format_document(
                         core = _replace_quotes(core)
                     para.add_run(f"{prefix}{core}")
                     para.style = "List Number"
+                    # Для уровня 0 отступы уже заданы в styles.py (left_indent=0, first_line_indent=1.25)
                     if lvl > 0:
-                        para.paragraph_format.left_indent = Cm(1.25 * (lvl + 1))
-                        para.paragraph_format.first_line_indent = Cm(-0.63)
+                        para.paragraph_format.left_indent = Cm(0.75 * lvl)
+                        # first_line_indent уже 1.25 из styles.py, не нужно менять
                     prev_list_type, prev_level = "list_ordered", lvl
                     logger.debug(f"Отформатирован нумерованный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
 
