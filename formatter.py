@@ -414,6 +414,7 @@ def format_document(
                         core = _replace_quotes(core)
                     para.add_run(f"– {core}")
                     para.style = "List Bullet"
+                    para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                     # Для уровня 0 отступы уже заданы в styles.py (left_indent=0, first_line_indent=1.25)
                     if lvl > 0:
                         para.paragraph_format.left_indent = Cm(0.75 * lvl)
@@ -445,6 +446,7 @@ def format_document(
                         core = _replace_quotes(core)
                     para.add_run(f"{prefix}{core}")
                     para.style = "List Number"
+                    para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                     # Для уровня 0 отступы уже заданы в styles.py (left_indent=0, first_line_indent=1.25)
                     if lvl > 0:
                         para.paragraph_format.left_indent = Cm(0.75 * lvl)
@@ -476,6 +478,7 @@ def format_document(
                         core = _replace_quotes(core)
                     para.add_run(f"{prefix}{core}")
                     para.style = "List Number"
+                    para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                     # Для уровня 0 отступы уже заданы в styles.py (left_indent=0, first_line_indent=1.25)
                     if lvl > 0:
                         para.paragraph_format.left_indent = Cm(0.75 * lvl)
