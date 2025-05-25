@@ -538,7 +538,7 @@ def format_document(
                     cap_txt = _clean_marker(cap_txt, r'^\[FIGURE\]\s*')
                     if replace_quotes:
                         cap_txt = _replace_quotes(cap_txt)
-                    p_cap = doc.add_paragraph(f"Рисунок {el['number']} — {cap_txt}", style="Caption")
+                    p_cap = doc.add_paragraph(f"Рисунок {el['number']} – {cap_txt}", style="Caption")
                     p_img._element.addnext(p_cap._element)
                     logger.debug(f"Добавлена подпись рисунка №{el['number']} на para_idx {para_idx}: '{cap_txt}'")
 
@@ -631,7 +631,7 @@ def format_document(
                 cap_txt = _clean_marker(cap_txt, r'^\[TABLE\]\s*')
                 if replace_quotes:
                     cap_txt = _replace_quotes(cap_txt)
-                cap = doc.add_paragraph(f"Таблица {table_i} — {cap_txt}", style="Caption")
+                cap = doc.add_paragraph(f"Таблица {table_i} – {cap_txt}", style="Caption")
                 cap.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 node.addprevious(cap._element)
                 logger.debug(f"Добавлена подпись таблицы №{table_i}: '{cap_txt}'")
