@@ -78,6 +78,7 @@ with col4:
     add_space_after = st.checkbox("Добавить пустую строку после таблиц и рисунков", value=True)
     format_tables = st.checkbox("Применить форматирование к таблицам (стиль Table Grid)", value=True)
 add_space_after_headings = st.checkbox("Добавить пустую строку после заголовков всех уровней", value=True)
+add_space_before_headings_2_to_4 = st.checkbox("Добавить пустую строку перед заголовками", value=True)
 
 # Инструкция по использованию
 with st.expander("Инструкция по использованию"):
@@ -160,7 +161,8 @@ if uploaded_file:
                     "add_space_before": add_space_before,
                     "add_space_after": add_space_after,
                     "format_tables": format_tables,
-                    "add_space_after_headings": add_space_after_headings  # Обновили ключ
+                    "add_space_after_headings": add_space_after_headings,
+                    "add_space_before_headings_2_to_4": add_space_before_headings_2_to_4  # Добавили новую настройку
                 }
             )
             end_format = time.time()

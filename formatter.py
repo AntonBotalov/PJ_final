@@ -255,7 +255,7 @@ def format_document(
     Args:
         elements: Список распознанных элементов документа.
         doc: Существующий документ Word.
-        config: Настройки форматирования (replace_quotes, add_space_before, add_space_after, format_tables, add_space_after_headings).
+        config: Настройки форматирования (replace_quotes, add_space_before, add_space_after, format_tables, add_space_after_headings, add_space_before_headings_2_to_4).
 
     Returns:
         Document: Отформатированный документ.
@@ -268,13 +268,15 @@ def format_document(
     add_space_before = cfg.get("add_space_before", True)
     add_space_after = cfg.get("add_space_after", True)
     format_tables = cfg.get("format_tables", True)
-    add_space_after_headings = cfg.get("add_space_after_headings", True)  # Обновили ключ
+    add_space_after_headings = cfg.get("add_space_after_headings", True)
+    add_space_before_headings_2_to_4 = cfg.get("add_space_before_headings_2_to_4", True)  # Новая настройка
     table_row_height = cfg.get("table_row_height", 18)
     max_table_row_height = cfg.get("max_table_row_height", 60)
 
     cnt: Dict[int, int] = {}
     prev_list_type: str | None = None
     prev_level: int | None = None
+    prev_element_type: str | None = None  # Для отслеживания типа предыдущего элемента
     is_bibliography = False
     heading_counters = {1: 0, 2: 0, 3: 0, 4: 0}  # Сбрасываем счётчики заголовков
 
@@ -342,6 +344,15 @@ def format_document(
                         heading_counters[4] += 1
                         num = f"{heading_counters[1]}.{heading_counters[2]}.{heading_counters[3]}.{heading_counters[4]}"  # Без точки в конце
 
+                    # Добавляем пустую строку перед заголовками 2–4 уровней, если предыдущий абзац не заголовок и настройка включена
+                    if add_space_before_headings_2_to_4 and lvl in [2, 3, 4] and prev_element_type and not prev_element_type.startswith("heading"):
+                        space_para = para.insert_paragraph_before("", style="Normal")
+                        space_para.paragraph_format.line_spacing = 1.5
+                        space_para.paragraph_format.space_before = Pt(0)
+                        space_para.paragraph_format.space_after = Pt(0)
+                        _disable_auto_spacing(space_para)
+                        logger.debug(f"Добавлена пустая строка перед заголовком уровня {lvl} на para_idx {para_idx}")
+
                     if lvl == 1:
                         break_para = para.insert_paragraph_before()
                         run = break_para.add_run()
@@ -387,6 +398,7 @@ def format_document(
                     parent.remove(para._element)
 
                     prev_list_type = None
+                    prev_element_type = etype  # Сохраняем тип текущего элемента
                     logger.debug(f"Добавлен новый заголовок уровня {lvl} на para_idx {para_idx}, старый удалён: '{text[:50]}'")
 
                 # ───── Bullet-list ────────────────────────────────
@@ -404,10 +416,10 @@ def format_document(
                     para.style = "List Bullet"
                     # Для уровня 0 отступы уже заданы в styles.py (left_indent=0, first_line_indent=1.25)
                     if lvl > 0:
-                        # Каждый уровень добавляет 0.75 см к предыдущему
                         para.paragraph_format.left_indent = Cm(0.75 * lvl)
                         # first_line_indent уже 1.25 из styles.py, не нужно менять
                     prev_list_type, prev_level = "list_bullet", lvl
+                    prev_element_type = etype  # Сохраняем тип текущего элемента
                     logger.debug(f"Отформатирован маркированный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
 
                 # ───── Ordered-list ────────────────────────────────
@@ -438,6 +450,7 @@ def format_document(
                         para.paragraph_format.left_indent = Cm(0.75 * lvl)
                         # first_line_indent уже 1.25 из styles.py, не нужно менять
                     prev_list_type, prev_level = "list_ordered", lvl
+                    prev_element_type = etype  # Сохраняем тип текущего элемента
                     logger.debug(f"Отформатирован нумерованный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
                     
                 # ───── Библиография ────────────────────────────────   
@@ -468,6 +481,7 @@ def format_document(
                         para.paragraph_format.left_indent = Cm(0.75 * lvl)
                         # first_line_indent уже 1.25 из styles.py, не нужно менять
                     prev_list_type, prev_level = "list_ordered", lvl
+                    prev_element_type = etype  # Сохраняем тип текущего элемента
                     logger.debug(f"Отформатирован нумерованный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
 
                 # ───── Рисунок ─────────────────────────────────────
@@ -556,6 +570,7 @@ def format_document(
                         i += 1
 
                     prev_list_type = None
+                    prev_element_type = etype  # Сохраняем тип текущего элемента
                     continue
 
                 # ───── Обычный текст ───────────────────────────────
@@ -571,6 +586,7 @@ def format_document(
                     para.paragraph_format.space_after = Pt(0)   # Принудительно устанавливаем отступ после абзаца
                     _disable_auto_spacing(para)  # Отключаем автоматические интервалы
                     prev_list_type = None
+                    prev_element_type = etype  # Сохраняем тип текущего элемента
                     logger.debug(f"Отформатирован параграф на para_idx {para_idx}: '{core[:50]}'")
 
                 # ───── Формула ─────────────────────────────────────
@@ -585,10 +601,12 @@ def format_document(
                     if f"({el['number']})" not in txt:
                         para.add_run(f" ({el['number']})")
                     prev_list_type = None
+                    prev_element_type = etype  # Сохраняем тип текущего элемента
                     logger.debug(f"Отформатирована формула №{el['number']} на para_idx {para_idx}: '{txt[:50]}'")
 
             else:
                 logger.debug(f"Элемент на para_idx {para_idx} не распознан, оставлен без изменений")
+                prev_element_type = None  # Если элемент не распознан, сбрасываем тип
 
             para_idx += 1
             i += 1

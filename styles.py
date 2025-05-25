@@ -137,7 +137,7 @@ def set_gost_styles(document: Document) -> None:
         all_caps=False,  # Убираем заглавные буквы
         alignment=WD_ALIGN_PARAGRAPH.LEFT,
         space_before=Pt(0),
-        space_after=Pt(8),  # Пустая строка после заголовка
+        space_after=Pt(0),  # Пустая строка после заголовка
         line_spacing=1.0,
         left_indent=Cm(1.25)  # Отступ слева 1,25 см
     )
@@ -150,7 +150,7 @@ def set_gost_styles(document: Document) -> None:
         all_caps=False,  # Убираем заглавные буквы
         alignment=WD_ALIGN_PARAGRAPH.LEFT,
         space_before=Pt(0),
-        space_after=Pt(8),  # Пустая строка после заголовка
+        space_after=Pt(0),  # Пустая строка после заголовка
         line_spacing=1.0,
         left_indent=Cm(1.25)  # Отступ слева 1,25 см
     )
@@ -162,7 +162,7 @@ def set_gost_styles(document: Document) -> None:
         alignment=WD_ALIGN_PARAGRAPH.LEFT,
         first_line_indent=Cm(1.25),
         space_before=Pt(0),
-        space_after=Pt(8),
+        space_after=Pt(0),
         line_spacing=1.0
     )
 
