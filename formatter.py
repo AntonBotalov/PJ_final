@@ -212,7 +212,8 @@ def _set_outline_level(paragraph: Paragraph, level: int) -> None:
 
 def _disable_auto_spacing(paragraph: Paragraph) -> None:
     """
-    Отключает автоматические интервалы до и после абзаца (w:beforeAutospacing и w:afterAutospacing).
+    Отключает автоматические интервалы до и после абзаца (w:beforeAutospacing и w:afterAutospacing)
+    и принудительно устанавливает space_before и space_after в 0.
 
     Args:
         paragraph (Paragraph): Параграф, для которого нужно отключить автоинтервалы.
@@ -227,7 +228,10 @@ def _disable_auto_spacing(paragraph: Paragraph) -> None:
     # Отключаем автоматические интервалы
     spacing.set(qn('w:beforeAutospacing'), "0")
     spacing.set(qn('w:afterAutospacing'), "0")
-    logger.debug("Отключены автоматические интервалы до и после абзаца")
+    # Принудительно устанавливаем space_before и space_after в 0
+    paragraph.paragraph_format.space_before = Pt(0)
+    paragraph.paragraph_format.space_after = Pt(0)
+    logger.debug("Отключены автоматические интервалы и установлены space_before и space_after в 0")
 
 def _clean_marker(text: str, marker_pattern: str) -> str:
     """
@@ -261,6 +265,8 @@ def format_document(
         Document: Отформатированный документ.
     """
     cfg = config or {}
+    logger.debug(f"Config received: {cfg}")
+
     table_i = cfg.get("table_idx", 0)
     figure_i = cfg.get("figure_idx", 0)
     formula_i = cfg.get("formula_idx", 0)
@@ -269,9 +275,11 @@ def format_document(
     add_space_after = cfg.get("add_space_after", True)
     format_tables = cfg.get("format_tables", True)
     add_space_after_headings = cfg.get("add_space_after_headings", True)
-    add_space_before_headings_2_to_4 = cfg.get("add_space_before_headings_2_to_4", True)  # Новая настройка
+    add_space_before_headings_2_to_4 = cfg.get("add_space_before_headings_2_to_4", True)
     table_row_height = cfg.get("table_row_height", 18)
     max_table_row_height = cfg.get("max_table_row_height", 60)
+
+    logger.debug(f"table_row_height: {table_row_height}, max_table_row_height: {max_table_row_height}")
 
     cnt: Dict[int, int] = {}
     prev_list_type: str | None = None
@@ -351,7 +359,6 @@ def format_document(
                         space_para.paragraph_format.space_before = Pt(0)
                         space_para.paragraph_format.space_after = Pt(0)
                         _disable_auto_spacing(space_para)
-                        logger.debug(f"Добавлена пустая строка перед заголовком уровня {lvl} на para_idx {para_idx}")
 
                     if lvl == 1:
                         break_para = para.insert_paragraph_before()
@@ -375,6 +382,10 @@ def format_document(
 
                     # Убедимся, что стиль применяется корректно
                     new_para.style = f"Heading {lvl}"
+                    # Принудительно сбрасываем отступы после применения стиля
+                    new_para.paragraph_format.space_before = Pt(0)
+                    new_para.paragraph_format.space_after = Pt(0)
+                    _disable_auto_spacing(new_para)
 
                     # Переопределяем параметры для нумерованных заголовков 1 уровня
                     if lvl == 1 and num != "":
@@ -419,6 +430,11 @@ def format_document(
                     if lvl > 0:
                         para.paragraph_format.left_indent = Cm(0.75 * lvl)
                         # first_line_indent уже 1.25 из styles.py, не нужно менять
+                    # Принудительно сбрасываем отступы после применения стиля
+                    para.paragraph_format.space_before = Pt(0)
+                    para.paragraph_format.space_after = Pt(0)
+                    para.paragraph_format.line_spacing = 1.5  
+                    _disable_auto_spacing(para)
                     prev_list_type, prev_level = "list_bullet", lvl
                     prev_element_type = etype  # Сохраняем тип текущего элемента
                     logger.debug(f"Отформатирован маркированный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
@@ -451,6 +467,11 @@ def format_document(
                     if lvl > 0:
                         para.paragraph_format.left_indent = Cm(0.75 * lvl)
                         # first_line_indent уже 1.25 из styles.py, не нужно менять
+                    # Принудительно сбрасываем отступы после применения стиля
+                    para.paragraph_format.space_before = Pt(0)
+                    para.paragraph_format.space_after = Pt(0)
+                    para.paragraph_format.line_spacing = 1.5  
+                    _disable_auto_spacing(para)
                     prev_list_type, prev_level = "list_ordered", lvl
                     prev_element_type = etype  # Сохраняем тип текущего элемента
                     logger.debug(f"Отформатирован нумерованный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
@@ -483,6 +504,11 @@ def format_document(
                     if lvl > 0:
                         para.paragraph_format.left_indent = Cm(0.75 * lvl)
                         # first_line_indent уже 1.25 из styles.py, не нужно менять
+                    # Принудительно сбрасываем отступы после применения стиля
+                    para.paragraph_format.space_before = Pt(0)
+                    para.paragraph_format.space_after = Pt(0)
+                    para.paragraph_format.line_spacing = 1.5  
+                    _disable_auto_spacing(para)
                     prev_list_type, prev_level = "list_ordered", lvl
                     prev_element_type = etype  # Сохраняем тип текущего элемента
                     logger.debug(f"Отформатирован нумерованный список на para_idx {para_idx}, уровень {lvl}: '{core[:50]}'")
@@ -529,6 +555,7 @@ def format_document(
                             p_img.paragraph_format.first_line_indent = Cm(0)
                             p_img.paragraph_format.space_before = Pt(0)
                             p_img.paragraph_format.space_after = Pt(0)
+                            _disable_auto_spacing(p_img)
                             logger.debug(f"Изображение №{el['number']} успешно добавлено в документ на para_idx {para_idx} с шириной {width.cm:.2f} см, отступы сброшены")
                         except Exception as e:
                             logger.error(f"Ошибка при добавлении изображения №{el['number']} на para_idx {para_idx}: {str(e)}")
@@ -542,6 +569,11 @@ def format_document(
                     if replace_quotes:
                         cap_txt = _replace_quotes(cap_txt)
                     p_cap = doc.add_paragraph(f"Рисунок {el['number']} – {cap_txt}", style="Caption")
+                    # Принудительно сбрасываем отступы после применения стиля
+                    p_cap.paragraph_format.space_before = Pt(0)
+                    p_cap.paragraph_format.space_after = Pt(0)
+                    p_cap.paragraph_format.line_spacing = 1.5  
+                    _disable_auto_spacing(p_cap)
                     p_img._element.addnext(p_cap._element)
                     logger.debug(f"Добавлена подпись рисунка №{el['number']} на para_idx {para_idx}: '{cap_txt}'")
 
@@ -601,6 +633,11 @@ def format_document(
                     para.clear()
                     para.add_run(txt)
                     para.style = "Formula"
+                    # Принудительно сбрасываем отступы после применения стиля
+                    para.paragraph_format.space_before = Pt(0)
+                    para.paragraph_format.space_after = Pt(0)
+                    para.paragraph_format.line_spacing = 1.5  
+                    _disable_auto_spacing(para)
                     if f"({el['number']})" not in txt:
                         para.add_run(f" ({el['number']})")
                     prev_list_type = None
@@ -636,6 +673,11 @@ def format_document(
                     cap_txt = _replace_quotes(cap_txt)
                 cap = doc.add_paragraph(f"Таблица {table_i} – {cap_txt}", style="Caption")
                 cap.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                # Принудительно сбрасываем отступы после применения стиля
+                cap.paragraph_format.space_before = Pt(0)
+                cap.paragraph_format.space_after = Pt(0)
+                cap.paragraph_format.line_spacing = 1.5  
+                _disable_auto_spacing(cap)
                 node.addprevious(cap._element)
                 logger.debug(f"Добавлена подпись таблицы №{table_i}: '{cap_txt}'")
 
@@ -660,6 +702,7 @@ def format_document(
                             pr.paragraph_format.left_indent = Cm(0)
                             pr.paragraph_format.space_before = Pt(0)
                             pr.paragraph_format.space_after = Pt(0)
+                            _disable_auto_spacing(pr)
                             pr.alignment = WD_ALIGN_PARAGRAPH.LEFT 
                     logger.debug(f"Отформатирована таблица №{table_i} с {len(table.rows)} строками")
                 else:
